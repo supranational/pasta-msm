@@ -1,0 +1,33 @@
+[package]
+name = "pasta-msm"
+version = "0.1.0"
+edition = "2018"
+
+[features]
+# By default, compile with ADX extension if the host supports it.
+# Binary can be executed on systems similar to the host.
+default = []
+# Compile in portable mode, without ISA extensions.
+# Binary can be executed on all systems.
+portable = [ "semolina/portable" ]
+# Enable ADX even if the host CPU doesn't support it.
+# Binary can be executed on Broadwell+ and Ryzen+ systems.
+force-adx = [ "semolina/force-adx" ]
+
+[dependencies]
+semolina = { path = "../semolina" }
+pasta_curves = { git = "https://github.com/dot-asm/pasta_curves", branch = "repr-c", features = ["repr-c"] }
+
+[build-dependencies]
+cc = "^1.0.70"
+which = "^4.0"
+
+[dev-dependencies]
+criterion = { version = "0.3", features = [ "html_reports" ] }
+rand = "^0"
+rand_chacha = "^0"
+rayon = "1.5"
+
+[[bench]]
+name = "main"
+harness = false
