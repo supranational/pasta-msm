@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstring>
 #include <memory>
+#include <tuple>
 
 using namespace std;
 

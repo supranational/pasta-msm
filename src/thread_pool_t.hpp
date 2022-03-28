@@ -5,7 +5,7 @@
 #ifndef __THREAD_POOL_T_HPP__
 #define __THREAD_POOL_T_HPP__
 
-#if __cplusplus < 201103L || (defined(_MSVC_LANG) && _MSVC_LANG < 201103L)
+#if __cplusplus < 201103L && !(defined(_MSVC_LANG) && _MSVC_LANG >= 201103L)
 # error C++11 or later is required.
 #endif
 

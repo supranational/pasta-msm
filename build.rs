@@ -42,6 +42,7 @@ fn main() {
 
     cc.flag_if_supported("-mno-avx") // avoid costly transitions
         .flag_if_supported("-fno-builtin")
+        .flag_if_supported("-std=c++11")
         .flag_if_supported("-Wno-unused-command-line-argument");
     if !cfg!(debug_assertions) {
         cc.define("NDEBUG", None);
