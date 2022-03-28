@@ -111,20 +111,95 @@ static void tile(point_t& ret, const affine_t points[], size_t npoints,
     integrate_buckets(ret, buckets, cbits);
 }
 
+template<typename T>
+static size_t num_bits(T l)
+{
+    const size_t T_BITS = 8*sizeof(T);
+# define MSB(x) ((T)(x) >> (T_BITS-1))
+    T x, mask;
+
+    if ((T)-1 < 0) {    // handle signed T
+        mask = MSB(l);
+        l ^= mask;
+        l += 1 & mask;
+    }
+
+    size_t bits = (((T)(~l & (l-1)) >> (T_BITS-1)) & 1) ^ 1;
+
+    if (sizeof(T) > 4) {
+        x = l >> (32 & (T_BITS-1));
+        mask = MSB(0 - x);  if ((T)-1 > 0) mask = 0 - mask;
+        bits += 32 & mask;
+        l ^= (x ^ l) & mask;
+    }
+
+    if (sizeof(T) > 2) {
+        x = l >> 16;
+        mask = MSB(0 - x);  if ((T)-1 > 0) mask = 0 - mask;
+        bits += 16 & mask;
+        l ^= (x ^ l) & mask;
+    }
+
+    if (sizeof(T) > 1) {
+        x = l >> 8;
+        mask = MSB(0 - x);  if ((T)-1 > 0) mask = 0 - mask;
+        bits += 8 & mask;
+        l ^= (x ^ l) & mask;
+    }
+
+    x = l >> 4;
+    mask = MSB(0 - x);  if ((T)-1 > 0) mask = 0 - mask;
+    bits += 4 & mask;
+    l ^= (x ^ l) & mask;
+
+    x = l >> 2;
+    mask = MSB(0 - x);  if ((T)-1 > 0) mask = 0 - mask;
+    bits += 2 & mask;
+    l ^= (x ^ l) & mask;
+
+    bits += l >> 1;
+
+    return bits;
+# undef MSB
+}
+
+tuple<size_t, size_t, size_t>
+static breakdown(size_t nbits, size_t window, size_t ncpus)
+{
+    size_t nx, ny, wnd;
+
+    if (nbits > window * ncpus) {
+        nx = 1;
+        wnd = window - num_bits(ncpus / 4);
+    } else {
+        nx = 2;
+        wnd = window - 2;
+        while ((nbits / wnd + 1) * nx < ncpus) {
+            nx += 1;
+            wnd = window - num_bits(3 * nx / 2);
+        }
+        nx -= 1;
+        wnd = window - num_bits(3 * nx / 2);
+    }
+    ny = nbits / wnd + 1;
+    wnd = nbits / ny + 1;
+
+    return make_tuple(nx, ny, wnd);
+}
+
+#include "thread_pool_t.hpp"
+static thread_pool_t da_pool;
+
 extern "C"
 void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
-                    const scalar_t _scalars[], bool mont)
+                     const scalar_t _scalars[], bool mont)
 {
     const size_t nbits = 255;
-    size_t wbits, cbits, bit0 = nbits;
     size_t window = window_size(npoints);
-
-    vector<point_t> buckets(1 << window);
-    memset(&buckets[0], 0, sizeof(buckets[0]) * buckets.size());
 
     // below is little-endian dependency, should it be removed?
     const pow256* scalars = reinterpret_cast<decltype(scalars)>(_scalars);
-    unique_ptr<pow256[]> store;
+    unique_ptr<pow256[]> store = nullptr;
     if (mont) {
         store = decltype(store)(new pow256[npoints]);
         for (size_t i = 0; i < npoints; i++)
@@ -132,21 +207,102 @@ void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
         scalars = &store[0];
     }
 
-    point_t p;
-    ret.inf();
+    size_t ncpus = da_pool.size();
+    if (ncpus < 2 || npoints < 32) {
+        vector<point_t> buckets(1 << window); /* zeroed */
 
-    /* top excess bits modulo target window size */
-    wbits = nbits % window; /* yes, it may be zero */
-    cbits = wbits + 1;
-    while (bit0 -= wbits) {
-        tile(p, points, npoints, scalars[0], 255,
-                &buckets[0], bit0, wbits, cbits);
+        point_t p;
+        ret.inf();
+
+        /* top excess bits modulo target window size */
+        size_t wbits = nbits % window, /* yes, it may be zero */
+               cbits = wbits + 1,
+               bit0 = nbits;
+        while (bit0 -= wbits) {
+            tile(p, points, npoints, scalars[0], nbits,
+                    &buckets[0], bit0, wbits, cbits);
+            ret.add(p);
+            for (size_t i = 0; i < window; i++)
+                ret.dbl();
+            cbits = wbits = window;
+        }
+        tile(p, points, npoints, scalars[0], nbits,
+                &buckets[0], 0, wbits, cbits);
         ret.add(p);
-        for (size_t i = 0; i < window; i++)
-            ret.dbl();
-        cbits = wbits = window;
+        return;
     }
-    tile(p, points, npoints, scalars[0], 255,
-            &buckets[0], 0, wbits, cbits);
-    ret.add(p);
+
+    size_t nx, ny;
+    tie(nx, ny, window) = breakdown(nbits, window, ncpus);
+
+    struct tile_t {
+        size_t x, dx, y, dy;
+        point_t p;
+        tile_t() {}
+    };
+    vector<tile_t> grid(nx * ny);
+
+    size_t dx = npoints / nx,
+           y  = window * (ny - 1);
+
+    size_t total = 0;
+    while (total < nx) {
+        grid[total].x  = total * dx;
+        grid[total].dx = dx;
+        grid[total].y  = y;
+        grid[total].dy = nbits - y;
+        total++;
+    }
+    grid[total - 1].dx = npoints - grid[total - 1].x;
+
+    while (y) {
+        y -= window;
+        for (size_t i = 0; i < nx; i++, total++) {
+            grid[total].x  = grid[i].x;
+            grid[total].dx = grid[i].dx;
+            grid[total].y  = y;
+            grid[total].dy = window;
+        }
+    }
+
+    vector<atomic<size_t>> row_sync(ny); /* zeroed */
+    atomic<size_t> counter(0);
+    channel_t<size_t> ch;
+
+    auto n_workers = min(ncpus, total);
+    while (n_workers--) {
+        da_pool.spawn([&, window, total, nbits]() {
+            vector<point_t> buckets(1 << window); /* zeroed */
+
+            for (size_t work; (work = counter++) < total;) {
+                size_t x  = grid[work].x,
+                       dx = grid[work].dx,
+                       y  = grid[work].y,
+                       dy = grid[work].dy;
+                tile(grid[work].p, &points[x], dx,
+                                   scalars[x], nbits, &buckets[0],
+                                   y, dy, dy + (dy < window));
+                if (++row_sync[y / window] == nx)
+                    ch.send(y);
+            }
+        });
+    }
+
+    ret.inf();
+    size_t row = 0;
+    while (ny--) {
+        auto y = ch.recv();
+        row_sync[y / window] = -1U;
+        while (grid[row].y == y) {
+            while (row < total && grid[row].y == y)
+                ret.add(grid[row++].p);
+            if (y == 0)
+                break;
+            for (size_t i = 0; i < window; i++)
+                ret.dbl();
+            y -= window;
+            if (row_sync[y / window] != -1U)
+                break;
+        }
+    }
 }
