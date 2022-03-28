@@ -30,9 +30,9 @@ static limb_t get_wval_limb(const byte *d, size_t off, size_t bits)
 
     /* this is not about constant-time-ness, but branch optimization */
     for (ret=0, i=0; i<4;) {
-	ret |= (*d & mask) << (8*i);
-	mask = (limb_t)0 - ((++i - top) >> (8*sizeof(top)-1));
-	d += 1 & mask;
+        ret |= (*d & mask) << (8*i);
+        mask = (limb_t)0 - ((++i - top) >> (8*sizeof(top)-1));
+        d += 1 & mask;
     }
 
     return ret >> (off%8);
@@ -57,19 +57,19 @@ static void integrate_buckets(point_t& out, point_t buckets[], size_t wbits)
     vec_copy(&ret, &buckets[n], sizeof(ret));
     vec_zero(&buckets[n], sizeof(buckets[n]));
     while (n--) {
-	acc.add(buckets[n]);
-	ret.add(acc);
-	vec_zero(&buckets[n], sizeof(buckets[n]));
+        acc.add(buckets[n]);
+        ret.add(acc);
+        vec_zero(&buckets[n], sizeof(buckets[n]));
     }
     out = ret;
 }
 
 static void bucket(point_t buckets[], limb_t booth_idx,
-		   size_t wbits, const affine_t& p)
+                   size_t wbits, const affine_t& p)
 {
     booth_idx &= (1<<wbits) - 1;
     if (booth_idx--)
-	buckets[booth_idx].add(p);
+        buckets[booth_idx].add(p);
 }
 
 static void prefetch(const point_t buckets[], limb_t booth_idx, size_t wbits)
@@ -77,7 +77,7 @@ static void prefetch(const point_t buckets[], limb_t booth_idx, size_t wbits)
 #if 0
     booth_idx &= (1<<wbits) - 1;
     if (booth_idx--)
-	vec_prefetch(&buckets[booth_idx], sizeof(buckets[booth_idx]));
+        vec_prefetch(&buckets[booth_idx], sizeof(buckets[booth_idx]));
 #else
     (void)buckets;
     (void)booth_idx;
@@ -86,8 +86,8 @@ static void prefetch(const point_t buckets[], limb_t booth_idx, size_t wbits)
 }
 
 static void tile(point_t& ret, const affine_t points[], size_t npoints,
-		 const byte* scalars, size_t nbits,
-		 point_t buckets[], size_t bit0, size_t wbits, size_t cbits)
+                 const byte* scalars, size_t nbits,
+                 point_t buckets[], size_t bit0, size_t wbits, size_t cbits)
 {
     limb_t wmask, wval, wnxt;
     size_t i, nbytes;
@@ -101,11 +101,11 @@ static void tile(point_t& ret, const affine_t points[], size_t npoints,
 
     bucket(buckets, wval, cbits, points[0]);
     for (i = 1; i < npoints; i++) {
-	wval = wnxt;
-	scalars += nbytes;
-	wnxt = get_wval_limb(scalars, bit0, wbits) & wmask;
-	prefetch(buckets, wnxt, cbits);
-	bucket(buckets, wval, cbits, points[i]);
+        wval = wnxt;
+        scalars += nbytes;
+        wnxt = get_wval_limb(scalars, bit0, wbits) & wmask;
+        prefetch(buckets, wnxt, cbits);
+        bucket(buckets, wval, cbits, points[i]);
     }
     bucket(buckets, wnxt, cbits, points[i]);
     integrate_buckets(ret, buckets, cbits);
@@ -113,7 +113,7 @@ static void tile(point_t& ret, const affine_t points[], size_t npoints,
 
 extern "C"
 void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
-		    const scalar_t _scalars[], bool mont)
+                    const scalar_t _scalars[], bool mont)
 {
     const size_t nbits = 255;
     size_t wbits, cbits, bit0 = nbits;
@@ -126,10 +126,10 @@ void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
     const pow256* scalars = reinterpret_cast<decltype(scalars)>(_scalars);
     unique_ptr<pow256[]> store;
     if (mont) {
-	store = decltype(store)(new pow256[npoints]);
-	for (size_t i = 0; i < npoints; i++)
-	    _scalars[i].to_scalar(store[i]); 
-	scalars = &store[0];
+        store = decltype(store)(new pow256[npoints]);
+        for (size_t i = 0; i < npoints; i++)
+            _scalars[i].to_scalar(store[i]);
+        scalars = &store[0];
     }
 
     point_t p;
@@ -139,14 +139,14 @@ void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
     wbits = nbits % window; /* yes, it may be zero */
     cbits = wbits + 1;
     while (bit0 -= wbits) {
-	tile(p, points, npoints, scalars[0], 255,
-		&buckets[0], bit0, wbits, cbits);
-	ret.add(p);
-	for (size_t i = 0; i < window; i++)
-	    ret.dbl();
-	cbits = wbits = window;
+        tile(p, points, npoints, scalars[0], 255,
+                &buckets[0], bit0, wbits, cbits);
+        ret.add(p);
+        for (size_t i = 0; i < window; i++)
+            ret.dbl();
+        cbits = wbits = window;
     }
     tile(p, points, npoints, scalars[0], 255,
-	    &buckets[0], 0, wbits, cbits);
+            &buckets[0], 0, wbits, cbits);
     ret.add(p);
 }
