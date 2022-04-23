@@ -16,10 +16,6 @@ extern "C" {
 #include "jacobian_t.hpp"
 #include "pasta_t.hpp"
 
-typedef jacobian_t<pallas_t> point_t;
-typedef point_t::affine_t affine_t;
-typedef vesta_t scalar_t;
-
 /* Works up to 25 bits. */
 static limb_t get_wval_limb(const byte *d, size_t off, size_t bits)
 {
@@ -48,6 +44,7 @@ static size_t window_size(size_t npoints)
     return wbits>12 ? wbits-3 : (wbits>4 ? wbits-2 : (wbits ? 2 : 1));
 }
 
+template<class point_t>
 static void integrate_buckets(point_t& out, point_t buckets[], size_t wbits)
 {
     point_t ret, acc;
@@ -65,6 +62,7 @@ static void integrate_buckets(point_t& out, point_t buckets[], size_t wbits)
     out = ret;
 }
 
+template<class point_t, class affine_t>
 static void bucket(point_t buckets[], limb_t booth_idx,
                    size_t wbits, const affine_t& p)
 {
@@ -73,6 +71,7 @@ static void bucket(point_t buckets[], limb_t booth_idx,
         buckets[booth_idx].add(p);
 }
 
+template<class point_t>
 static void prefetch(const point_t buckets[], limb_t booth_idx, size_t wbits)
 {
 #if 0
@@ -86,6 +85,7 @@ static void prefetch(const point_t buckets[], limb_t booth_idx, size_t wbits)
 #endif
 }
 
+template<class point_t, class affine_t>
 static void tile(point_t& ret, const affine_t points[], size_t npoints,
                  const byte* scalars, size_t nbits,
                  point_t buckets[], size_t bit0, size_t wbits, size_t cbits)
@@ -191,9 +191,9 @@ static breakdown(size_t nbits, size_t window, size_t ncpus)
 #include "thread_pool_t.hpp"
 static thread_pool_t da_pool;
 
-extern "C"
+template <class point_t, class affine_t, class scalar_t>
 void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
-                     const scalar_t _scalars[], bool mont)
+                    const scalar_t _scalars[], bool mont)
 {
     const size_t nbits = 255;
     size_t window = window_size(npoints);
@@ -307,3 +307,9 @@ void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
         }
     }
 }
+
+extern "C"
+void mult_pippenger(jacobian_t<pallas_t>& ret,
+                    const jacobian_t<pallas_t>::affine_t points[],
+                    size_t npoints, const vesta_t scalars[], bool mont)
+{   mult_pippenger<>(ret, points, npoints, scalars, mont);   }
