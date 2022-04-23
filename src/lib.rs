@@ -7,7 +7,7 @@ extern crate semolina;
 use pasta_curves::{self, pallas};
 
 extern "C" {
-    fn mult_pippenger(
+    fn mult_pippenger_pallas(
         out: *mut pallas::Point,
         points: *const pallas::Affine,
         npoints: usize,
@@ -26,7 +26,9 @@ pub fn multi_scalar_mult(
     }
 
     let mut ret = pallas::Point::default();
-    unsafe { mult_pippenger(&mut ret, &points[0], npoints, &scalars[0], true) };
+    unsafe {
+        mult_pippenger_pallas(&mut ret, &points[0], npoints, &scalars[0], true)
+    };
     ret
 }
 

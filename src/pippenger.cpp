@@ -309,7 +309,13 @@ void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
 }
 
 extern "C"
-void mult_pippenger(jacobian_t<pallas_t>& ret,
-                    const jacobian_t<pallas_t>::affine_t points[],
-                    size_t npoints, const vesta_t scalars[], bool mont)
+void mult_pippenger_pallas(jacobian_t<pallas_t>& ret,
+                           const jacobian_t<pallas_t>::affine_t points[],
+                           size_t npoints, const vesta_t scalars[], bool mont)
+{   mult_pippenger<>(ret, points, npoints, scalars, mont);   }
+
+extern "C"
+void mult_pippenger_vesta(jacobian_t<vesta_t>& ret,
+                          const jacobian_t<vesta_t>::affine_t points[],
+                          size_t npoints, const pallas_t scalars[], bool mont)
 {   mult_pippenger<>(ret, points, npoints, scalars, mont);   }
