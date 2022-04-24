@@ -16,7 +16,7 @@ force-adx = [ "semolina/force-adx" ]
 
 [dependencies]
 semolina = { git = "https://github.com/supranational/semolina" }
-pasta_curves = { git = "https://github.com/dot-asm/pasta_curves", branch = "repr-c", features = ["repr-c"] }
+pasta_curves = { version = "^0.3.1", features = ["repr-c"] }
 
 [build-dependencies]
 cc = "^1.0.70"
