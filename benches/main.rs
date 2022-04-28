@@ -7,7 +7,7 @@
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use pasta_msm::multi_scalar_mult;
+use pasta_msm;
 
 include!("../src/tests.rs");
 
@@ -23,7 +23,7 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     group.bench_function(format!("{} points", NPOINTS), |b| {
         b.iter(|| {
-            let _ = multi_scalar_mult(&points, &scalars);
+            let _ = pasta_msm::pallas(&points, &scalars);
         })
     });
 

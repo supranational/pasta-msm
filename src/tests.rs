@@ -4,9 +4,9 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use core::mem::transmute;
     use core::sync::atomic::*;
+    use crate as pasta_msm;
     use pasta_curves::{
         arithmetic::CurveExt,
         group::{ff::Field, Curve},
@@ -145,7 +145,7 @@ mod tests {
         let naive = naive_multiscalar_mul(&points, &scalars);
         println!("{:?}", naive);
 
-        let ret = multi_scalar_mult(&points, &scalars).to_affine();
+        let ret = pasta_msm::pallas(&points, &scalars).to_affine();
         println!("{:?}", ret);
 
         assert_eq!(ret, naive);

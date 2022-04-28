@@ -4,32 +4,40 @@
 
 extern crate semolina;
 
-use pasta_curves::{self, pallas};
+macro_rules! multi_scalar_mult {
+    (
+        $pasta:ident,
+        $mult:ident
+    ) => {
+        use pasta_curves::$pasta;
 
-extern "C" {
-    fn mult_pippenger_pallas(
-        out: *mut pallas::Point,
-        points: *const pallas::Affine,
-        npoints: usize,
-        scalars: *const pallas::Scalar,
-        is_mont: bool,
-    );
-}
+        extern "C" {
+            fn $mult(
+                out: *mut $pasta::Point,
+                points: *const $pasta::Affine,
+                npoints: usize,
+                scalars: *const $pasta::Scalar,
+                is_mont: bool,
+            );
+        }
 
-pub fn multi_scalar_mult(
-    points: &[pallas::Affine],
-    scalars: &[pallas::Scalar],
-) -> pallas::Point {
-    let npoints = points.len();
-    if npoints != scalars.len() {
-        panic!("length mismatch")
-    }
+        pub fn $pasta(
+            points: &[$pasta::Affine],
+            scalars: &[$pasta::Scalar],
+        ) -> $pasta::Point {
+            let npoints = points.len();
+            if npoints != scalars.len() {
+                panic!("length mismatch")
+            }
 
-    let mut ret = pallas::Point::default();
-    unsafe {
-        mult_pippenger_pallas(&mut ret, &points[0], npoints, &scalars[0], true)
+            let mut ret = $pasta::Point::default();
+            unsafe { $mult(&mut ret, &points[0], npoints, &scalars[0], true) };
+            ret
+        }
     };
-    ret
 }
+
+multi_scalar_mult!(pallas, mult_pippenger_pallas);
+multi_scalar_mult!(vesta, mult_pippenger_vesta);
 
 include!("tests.rs");
