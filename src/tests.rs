@@ -4,13 +4,13 @@
 
 #[cfg(test)]
 mod tests {
+    use crate as pasta_msm;
     use core::mem::transmute;
     use core::sync::atomic::*;
-    use crate as pasta_msm;
     use pasta_curves::{
         arithmetic::CurveExt,
         group::{ff::Field, Curve},
-	pallas,
+        pallas,
     };
     use rand::{RngCore, SeedableRng};
     use rand_chacha::ChaCha20Rng;
