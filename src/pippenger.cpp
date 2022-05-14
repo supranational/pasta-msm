@@ -14,6 +14,7 @@ extern "C" {
 }
 
 #include "jacobian_t.hpp"
+#include "xyzz_t.hpp"
 #include "pasta_t.hpp"
 
 /* Works up to 25 bits. */
@@ -310,12 +311,12 @@ void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
 
 extern "C"
 void mult_pippenger_pallas(jacobian_t<pallas_t>& ret,
-                           const jacobian_t<pallas_t>::affine_t points[],
+                           const xyzz_t<pallas_t>::affine_t points[],
                            size_t npoints, const vesta_t scalars[], bool mont)
-{   mult_pippenger<jacobian_t<pallas_t>>(ret, points, npoints, scalars, mont);   }
+{   mult_pippenger<xyzz_t<pallas_t>>(ret, points, npoints, scalars, mont);   }
 
 extern "C"
 void mult_pippenger_vesta(jacobian_t<vesta_t>& ret,
-                          const jacobian_t<vesta_t>::affine_t points[],
+                          const xyzz_t<vesta_t>::affine_t points[],
                           size_t npoints, const pallas_t scalars[], bool mont)
-{   mult_pippenger<jacobian_t<vesta_t>>(ret, points, npoints, scalars, mont);   }
+{   mult_pippenger<xyzz_t<vesta_t>>(ret, points, npoints, scalars, mont);   }
