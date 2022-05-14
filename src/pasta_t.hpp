@@ -47,7 +47,7 @@ public:
     inline void from()
     {   pasta_from(val, val, MOD, M0);   }
 
-    inline void store(uint64_t *p)
+    inline void store(uint64_t *p) const
     {
         for (size_t i = 0; i < sizeof(val)/sizeof(val[0]); i++)
             p[i] = val[i];
