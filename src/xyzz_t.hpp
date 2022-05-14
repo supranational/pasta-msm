@@ -21,7 +21,8 @@ public:
     class affine_t { friend xyzz_t;
         field_t X, Y;
 
-        bool is_inf() const { return (bool)(X.is_zero() & Y.is_zero()); }
+        inline __device__ bool is_inf() const
+        {   return (bool)(X.is_zero() & Y.is_zero());   }
     };
 
     inline __device__ xyzz_t& operator=(const affine_t& a)
@@ -46,15 +47,18 @@ public:
      */
     __device__ void add(const xyzz_t& p2)
     {
-        xyzz_t& p31 = *this;
-
         if (p2.is_inf()) {
             return;
-        } else if (p31.is_inf()) {
-            p31 = p2;
+        } else if (is_inf()) {
+            *this = p2;
             return;
         }
 
+#ifdef __CUDA_ARCH__
+        xyzz_t p31 = *this;
+#else
+        xyzz_t& p31 = *this;
+#endif
         field_t U, S, P, R;
 
         U = p31.X * p2.ZZ;          /* U1 = X1*ZZ2 */
@@ -65,10 +69,14 @@ public:
         R -= S;                     /* R = S2-S1 */
 
         if (!P.is_zero()) {         /* X1!=X2 */
-            field_t PP, PPP, Q;     /* add |p1| and |p2| */
+            field_t PP;             /* add |p1| and |p2| */
 
             PP = P^2;               /* PP = P^2 */
+#define PPP P
             PPP = P * PP;           /* PPP = P*PP */
+            p31.ZZ *= PP;           /* ZZ3 = ZZ1*ZZ2*PP */
+            p31.ZZZ *= PPP;         /* ZZZ3 = ZZZ1*ZZZ2*PPP */
+#define Q PP
             Q = U * PP;             /* Q = U1*PP */
             p31.X = R^2;            /* R^2 */
             p31.X -= PPP;           /* R^2-PPP */
@@ -80,14 +88,16 @@ public:
             p31.Y = Q - p31.Y;      /* Y3 = R*(Q-X3)-S1*PPP */
             p31.ZZ *= p2.ZZ;        /* ZZ1*ZZ2 */
             p31.ZZZ *= p2.ZZZ;      /* ZZZ1*ZZZ2 */
-            p31.ZZ *= PP;           /* ZZ3 = ZZ1*ZZ2*PP */
-            p31.ZZZ *= PPP;         /* ZZZ3 = ZZZ1*ZZZ2*PPP */
+#undef PPP
+#undef Q
         } else if (R.is_zero()) {   /* X1==X2 && Y1==Y2 */
-            field_t V, W, M;        /* double |p1| */
+            field_t M;              /* double |p1| */
 
             U = p31.Y + p31.Y;      /* U = 2*Y1 */
+#define V P
+#define W R
             V = U^2;                /* V = U^2 */
-            W = U * W;              /* W = U*V */
+            W = U * V;              /* W = U*V */
             S = p31.X * V;          /* S = X1*V */
             M = p31.X^2;
             M = M + M + M;          /* M = 3*X1^2[+a*ZZ1^2] */
@@ -100,9 +110,14 @@ public:
             p31.Y = S - p31.Y;      /* Y3 = M*(S-X3)-W*Y1 */
             p31.ZZ *= V;            /* ZZ3 = V*ZZ1 */
             p31.ZZZ *= W;           /* ZZ3 = W*ZZZ1 */
+#undef V
+#undef W
         } else {                    /* X1==X2 && Y1==-Y2 */\
             p31.inf();              /* set |p3| to infinity */\
         }
+#ifdef __CUDA_ARCH__
+        *this = p31;
+#endif
     }
 
     /*
