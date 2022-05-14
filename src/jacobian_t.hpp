@@ -15,18 +15,26 @@
 #endif
 
 template<class field_t> class jacobian_t {
-    field_t X, Y, Z;
-
     inline operator const void*() const { return this; }
     inline operator void*()             { return this; }
 
 public:
+    field_t X, Y, Z;
+
     class affine_t { friend jacobian_t;
         field_t X, Y;
 
         inline __device__ bool is_inf() const
         {   return (bool)(X.is_zero() & Y.is_zero());   }
     };
+
+    inline __device__ jacobian_t& operator=(const affine_t& a)
+    {
+        X = a.X;
+        Y = a.Y;
+        Z = field_t::one();
+        return *this;
+    }
 
     inline __device__ bool is_inf() const { return (bool)(Z.is_zero()); }
     inline __device__ void inf()          { Z.zero(); }
@@ -453,9 +461,7 @@ public:
         if (p2.is_inf()) {
             return;
         } else if (p1.is_inf()) {
-            p3.X = p2.X;
-            p3.Y = p2.Y;
-            p3.Z = field_t::one();
+            p3 = p2;
         } else {
             field_t Z1Z1, H;
 
