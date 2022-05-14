@@ -44,10 +44,10 @@ static size_t window_size(size_t npoints)
     return wbits>12 ? wbits-3 : (wbits>4 ? wbits-2 : (wbits ? 2 : 1));
 }
 
-template<class point_t>
-static void integrate_buckets(point_t& out, point_t buckets[], size_t wbits)
+template<class point_t, class bucket_t>
+static void integrate_buckets(point_t& out, bucket_t buckets[], size_t wbits)
 {
-    point_t ret, acc;
+    bucket_t ret, acc;
     size_t n = (size_t)1 << wbits;
 
     /* Calculate sum of x[i-1]*i for i=1 through 1<<|wbits|. */
@@ -62,8 +62,8 @@ static void integrate_buckets(point_t& out, point_t buckets[], size_t wbits)
     out = ret;
 }
 
-template<class point_t, class affine_t>
-static void bucket(point_t buckets[], limb_t booth_idx,
+template<class bucket_t, class affine_t>
+static void bucket(bucket_t buckets[], limb_t booth_idx,
                    size_t wbits, const affine_t& p)
 {
     booth_idx &= (1<<wbits) - 1;
@@ -71,8 +71,8 @@ static void bucket(point_t buckets[], limb_t booth_idx,
         buckets[booth_idx].add(p);
 }
 
-template<class point_t>
-static void prefetch(const point_t buckets[], limb_t booth_idx, size_t wbits)
+template<class bucket_t>
+static void prefetch(const bucket_t buckets[], limb_t booth_idx, size_t wbits)
 {
 #if 0
     booth_idx &= (1<<wbits) - 1;
@@ -85,10 +85,10 @@ static void prefetch(const point_t buckets[], limb_t booth_idx, size_t wbits)
 #endif
 }
 
-template<class point_t, class affine_t>
+template<class point_t, class affine_t, class bucket_t>
 static void tile(point_t& ret, const affine_t points[], size_t npoints,
                  const byte* scalars, size_t nbits,
-                 point_t buckets[], size_t bit0, size_t wbits, size_t cbits)
+                 bucket_t buckets[], size_t bit0, size_t wbits, size_t cbits)
 {
     limb_t wmask, wval, wnxt;
     size_t i, nbytes;
@@ -191,7 +191,7 @@ static breakdown(size_t nbits, size_t window, size_t ncpus)
 #include "thread_pool_t.hpp"
 static thread_pool_t da_pool;
 
-template <class point_t, class affine_t, class scalar_t>
+template <class bucket_t, class point_t, class affine_t, class scalar_t>
 void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
                     const scalar_t _scalars[], bool mont)
 {
@@ -210,7 +210,7 @@ void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
 
     size_t ncpus = da_pool.size();
     if (ncpus < 2 || npoints < 32) {
-        vector<point_t> buckets(1 << window); /* zeroed */
+        vector<bucket_t> buckets(1 << window); /* zeroed */
 
         point_t p;
         ret.inf();
@@ -273,7 +273,7 @@ void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
     auto n_workers = min(ncpus, total);
     while (n_workers--) {
         da_pool.spawn([&, window, total, nbits]() {
-            vector<point_t> buckets(1 << window); /* zeroed */
+            vector<bucket_t> buckets(1 << window); /* zeroed */
 
             for (size_t work; (work = counter++) < total;) {
                 size_t x  = grid[work].x,
@@ -312,10 +312,10 @@ extern "C"
 void mult_pippenger_pallas(jacobian_t<pallas_t>& ret,
                            const jacobian_t<pallas_t>::affine_t points[],
                            size_t npoints, const vesta_t scalars[], bool mont)
-{   mult_pippenger<>(ret, points, npoints, scalars, mont);   }
+{   mult_pippenger<jacobian_t<pallas_t>>(ret, points, npoints, scalars, mont);   }
 
 extern "C"
 void mult_pippenger_vesta(jacobian_t<vesta_t>& ret,
                           const jacobian_t<vesta_t>::affine_t points[],
                           size_t npoints, const pallas_t scalars[], bool mont)
-{   mult_pippenger<>(ret, points, npoints, scalars, mont);   }
+{   mult_pippenger<jacobian_t<vesta_t>>(ret, points, npoints, scalars, mont);   }
