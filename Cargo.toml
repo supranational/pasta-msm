@@ -2,6 +2,17 @@
 name = "pasta-msm"
 version = "0.1.0"
 edition = "2018"
+license = "Apache-2.0"
+description = "Optimized multiscalar multiplicaton for Pasta moduli for x86_64 and aarch64"
+repository = "https://github.com/supranational/pasta-msm"
+readme = "README.md"
+include = [
+    "/benches/**",
+    "/src/**",
+    "/Cargo.toml",
+    "/build.rs",
+    "/README.md",
+]
 
 [features]
 # By default, compile with ADX extension if the host supports it.
@@ -15,7 +26,7 @@ portable = [ "semolina/portable" ]
 force-adx = [ "semolina/force-adx" ]
 
 [dependencies]
-semolina = { git = "https://github.com/supranational/semolina" }
+semolina = "^0"
 pasta_curves = { version = "^0.3.1", features = ["repr-c"] }
 
 [build-dependencies]
