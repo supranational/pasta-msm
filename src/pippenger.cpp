@@ -268,12 +268,12 @@ void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
     }
 
     vector<atomic<size_t>> row_sync(ny); /* zeroed */
-    atomic<size_t> counter(0);
+    counter_t<size_t> counter(0);
     channel_t<size_t> ch;
 
     auto n_workers = min(ncpus, total);
     while (n_workers--) {
-        da_pool.spawn([&, window, total, nbits]() {
+        da_pool.spawn([&, window, total, nbits, nx, counter]() {
             vector<bucket_t> buckets(1 << window); /* zeroed */
 
             for (size_t work; (work = counter++) < total;) {
