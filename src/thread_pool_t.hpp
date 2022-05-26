@@ -132,4 +132,27 @@ public:
         return msg;
     }
 };
+
+template<typename T> class counter_t {
+    struct inner {
+        std::atomic<T> val;
+        std::atomic<size_t> ref_cnt;
+        inline inner(T v) { val = v, ref_cnt = 1; };
+    };
+    inner *ptr;
+public:
+    counter_t(T v=0) { ptr = new inner(v); }
+    counter_t(const counter_t& r)
+    {   (ptr = r.ptr)->ref_cnt.fetch_add(1, std::memory_order_relaxed);   }
+    ~counter_t()
+    {
+        if (ptr->ref_cnt.fetch_sub(1, std::memory_order_seq_cst) == 1)
+            delete ptr;
+    }
+    size_t ref_cnt() const  { return ptr->ref_cnt; }
+    T operator++(int) const { return ptr->val.fetch_add(1, std::memory_order_relaxed); }
+    T operator++() const    { return ptr->val++ + 1; }
+    T operator--(int) const { return ptr->val.fetch_sub(1, std::memory_order_relaxed); }
+    T operator--() const    { return ptr->val-- - 1; }
+};
 #endif  // __THREAD_POOL_T_HPP__
