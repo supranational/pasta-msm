@@ -274,18 +274,21 @@ void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
     auto n_workers = min(ncpus, total);
     while (n_workers--) {
         da_pool.spawn([&, window, total, nbits, nx, counter]() {
-            vector<bucket_t> buckets(1 << window); /* zeroed */
+            size_t work;
+            if ((work = counter++) < total) {
+                vector<bucket_t> buckets(1 << window); /* zeroed */
 
-            for (size_t work; (work = counter++) < total;) {
-                size_t x  = grid[work].x,
-                       dx = grid[work].dx,
-                       y  = grid[work].y,
-                       dy = grid[work].dy;
-                tile(grid[work].p, &points[x], dx,
-                                   scalars[x], nbits, &buckets[0],
-                                   y, dy, dy + (dy < window));
-                if (++row_sync[y / window] == nx)
-                    ch.send(y);
+                do {
+                    size_t x  = grid[work].x,
+                           dx = grid[work].dx,
+                           y  = grid[work].y,
+                           dy = grid[work].dy;
+                    tile(grid[work].p, &points[x], dx,
+                                       scalars[x], nbits, &buckets[0],
+                                       y, dy, dy + (dy < window));
+                    if (++row_sync[y / window] == nx)
+                        ch.send(y);
+                } while ((work = counter++) < total);
             }
         });
     }
