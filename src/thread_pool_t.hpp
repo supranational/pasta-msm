@@ -16,6 +16,9 @@
 #include <vector>
 #include <deque>
 #include <functional>
+#ifdef _GNU_SOURCE
+# include <sched.h>
+#endif
 
 class thread_pool_t {
 private:
@@ -31,8 +34,17 @@ private:
 public:
     thread_pool_t(unsigned int num_threads = 0) : done(false)
     {
-        if (num_threads == 0)
+        if (num_threads == 0) {
             num_threads = std::thread::hardware_concurrency();
+#ifdef _GNU_SOURCE
+            cpu_set_t set;
+            if (sched_getaffinity(0, sizeof(set), &set) == 0) {
+                size_t i;
+                for (i = num_threads, num_threads = 0; i--;)
+                    num_threads += CPU_ISSET(i, &set);
+            }
+#endif
+        }
 
         threads.reserve(num_threads);
 
