@@ -9,13 +9,9 @@
 
 using namespace std;
 
-extern "C" {
-#include "vect.h"
-}
-
-#include "jacobian_t.hpp"
-#include "xyzz_t.hpp"
-#include "pasta_t.hpp"
+#include <ec/jacobian_t.hpp>
+#include <ec/xyzz_t.hpp>
+#include <ff/pasta.hpp>
 
 /* Works up to 25 bits. */
 static limb_t get_wval_limb(const byte *d, size_t off, size_t bits)
@@ -189,7 +185,7 @@ static breakdown(size_t nbits, size_t window, size_t ncpus)
     return make_tuple(nx, ny, wnd);
 }
 
-#include "thread_pool_t.hpp"
+#include <util/thread_pool_t.hpp>
 static thread_pool_t da_pool;
 
 template <class bucket_t, class point_t, class affine_t, class scalar_t>

@@ -50,6 +50,9 @@ fn main() {
     if let Some(include) = env::var_os("DEP_SEMOLINA_C_INCLUDE") {
         cc.include(include);
     }
+    if let Some(include) = env::var_os("DEP_SPPARK_ROOT") {
+        cc.include(include);
+    }
     cc.files(&files).compile("pasta_msm");
 
     if cfg!(target_os = "windows") && !cfg!(target_env = "msvc") {

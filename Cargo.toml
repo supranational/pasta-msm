@@ -27,6 +27,7 @@ force-adx = [ "semolina/force-adx" ]
 
 [dependencies]
 semolina = "^0"
+sppark = "^0"
 pasta_curves = { version = "^0.3.1", features = ["repr-c"] }
 
 [build-dependencies]
