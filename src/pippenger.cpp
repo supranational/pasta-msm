@@ -185,12 +185,31 @@ static breakdown(size_t nbits, size_t window, size_t ncpus)
     return make_tuple(nx, ny, wnd);
 }
 
+template <class point_t, class affine_t>
+static void mult(point_t& ret, const affine_t& point, const pow256 scalar)
+{
+    ret.inf();
+    if (point.is_inf())
+        return;
+
+    size_t top = 256;
+    while (--top && !is_bit_set(scalar, top)) ;
+    if (is_bit_set(scalar, top)) {
+        ret = point;
+        while (top--) {
+            ret.dbl();
+            if (is_bit_set(scalar, top))
+                ret.add(point);
+        }
+    }
+}
+
 #include <util/thread_pool_t.hpp>
 static thread_pool_t da_pool;
 
 template <class bucket_t, class point_t, class affine_t, class scalar_t>
-void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
-                    const scalar_t _scalars[], bool mont)
+static void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
+                           const scalar_t _scalars[], bool mont)
 {
     const size_t nbits = 255;
     size_t window = window_size(npoints);
@@ -207,6 +226,11 @@ void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints,
 
     size_t ncpus = da_pool.size();
     if (ncpus < 2 || npoints < 32) {
+        if (npoints == 1) { // for completeness
+            mult(ret, points[0], scalars[0]);
+            return;
+        }
+
         vector<bucket_t> buckets(1 << window); /* zeroed */
 
         point_t p;
