@@ -7,8 +7,6 @@
 #include <memory>
 #include <tuple>
 
-using namespace std;
-
 #include <ec/jacobian_t.hpp>
 #include <ec/xyzz_t.hpp>
 #include <ff/pasta.hpp>
@@ -161,7 +159,7 @@ static size_t num_bits(T l)
 # undef MSB
 }
 
-tuple<size_t, size_t, size_t>
+std::tuple<size_t, size_t, size_t>
 static breakdown(size_t nbits, size_t window, size_t ncpus)
 {
     size_t nx, ny, wnd;
@@ -186,7 +184,7 @@ static breakdown(size_t nbits, size_t window, size_t ncpus)
     ny = nbits / wnd + 1;
     wnd = nbits / ny + 1;
 
-    return make_tuple(nx, ny, wnd);
+    return std::make_tuple(nx, ny, wnd);
 }
 
 template <class point_t, class affine_t>
@@ -220,7 +218,7 @@ static void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints
 
     // below is little-endian dependency, should it be removed?
     const pow256* scalars = reinterpret_cast<decltype(scalars)>(_scalars);
-    unique_ptr<pow256[]> store = nullptr;
+    std::unique_ptr<pow256[]> store = nullptr;
     if (mont) {
         store = decltype(store)(new pow256[npoints]);
         for (size_t i = 0; i < npoints; i++)
@@ -235,7 +233,7 @@ static void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints
             return;
         }
 
-        vector<bucket_t> buckets(1 << window); /* zeroed */
+        std::vector<bucket_t> buckets(1 << window); /* zeroed */
 
         point_t p;
         ret.inf();
@@ -259,14 +257,14 @@ static void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints
     }
 
     size_t nx, ny;
-    tie(nx, ny, window) = breakdown(nbits, window, ncpus);
+    std::tie(nx, ny, window) = breakdown(nbits, window, ncpus);
 
     struct tile_t {
         size_t x, dx, y, dy;
         point_t p;
         tile_t() {}
     };
-    vector<tile_t> grid(nx * ny);
+    std::vector<tile_t> grid(nx * ny);
 
     size_t dx = npoints / nx,
            y  = window * (ny - 1);
@@ -291,16 +289,16 @@ static void mult_pippenger(point_t& ret, const affine_t points[], size_t npoints
         }
     }
 
-    vector<atomic<size_t>> row_sync(ny); /* zeroed */
+    std::vector<std::atomic<size_t>> row_sync(ny); /* zeroed */
     counter_t<size_t> counter(0);
     channel_t<size_t> ch;
 
-    auto n_workers = min(ncpus, total);
+    auto n_workers = std::min(ncpus, total);
     while (n_workers--) {
         da_pool.spawn([&, window, total, nbits, nx, counter]() {
             size_t work;
             if ((work = counter++) < total) {
-                vector<bucket_t> buckets(1 << window); /* zeroed */
+                std::vector<bucket_t> buckets(1 << window); /* zeroed */
 
                 do {
                     size_t x  = grid[work].x,
