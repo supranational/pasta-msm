@@ -4,10 +4,18 @@
 
 extern crate semolina;
 
+#[cfg(feature = "cuda")]
+sppark::cuda_error!();
+#[cfg(feature = "cuda")]
+extern "C" {
+    fn cuda_available() -> bool;
+}
+
 macro_rules! multi_scalar_mult {
     (
         $pasta:ident,
-        $mult:ident
+        $mult:ident,
+        $cuda_mult:ident
     ) => {
         use pasta_curves::$pasta;
 
@@ -30,6 +38,26 @@ macro_rules! multi_scalar_mult {
                 panic!("length mismatch")
             }
 
+            #[cfg(feature = "cuda")]
+            if unsafe { cuda_available() } {
+                extern "C" {
+                    fn $cuda_mult(
+                        out: *mut $pasta::Point,
+                        points: *const $pasta::Affine,
+                        npoints: usize,
+                        scalars: *const $pasta::Scalar,
+                        is_mont: bool,
+                    ) -> cuda::Error;
+                }
+                let mut ret = $pasta::Point::default();
+                let err = unsafe {
+                    $cuda_mult(&mut ret, &points[0], npoints, &scalars[0], true)
+                };
+                if err.code != 0 {
+                    panic!("{}", String::from(err));
+                }
+                return ret;
+            }
             let mut ret = $pasta::Point::default();
             unsafe { $mult(&mut ret, &points[0], npoints, &scalars[0], true) };
             ret
@@ -37,7 +65,7 @@ macro_rules! multi_scalar_mult {
     };
 }
 
-multi_scalar_mult!(pallas, mult_pippenger_pallas);
-multi_scalar_mult!(vesta, mult_pippenger_vesta);
+multi_scalar_mult!(pallas, mult_pippenger_pallas, cuda_pippenger_pallas);
+multi_scalar_mult!(vesta, mult_pippenger_vesta, cuda_pippenger_vesta);
 
 include!("tests.rs");

@@ -8,6 +8,7 @@ repository = "https://github.com/supranational/pasta-msm"
 readme = "README.md"
 include = [
     "/benches/**",
+    "/cuda/**",
     "/src/**",
     "/Cargo.toml",
     "/build.rs",
@@ -27,7 +28,7 @@ force-adx = [ "semolina/force-adx" ]
 
 [dependencies]
 semolina = "^0"
-sppark = "^0"
+sppark = { git = "https://github.com/supranational/sppark" }
 pasta_curves = { version = "^0.3.1", features = ["repr-c"] }
 
 [build-dependencies]

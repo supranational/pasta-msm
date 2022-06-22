@@ -13,16 +13,17 @@ fn main() {
 
     let c_src_dir = PathBuf::from("src");
     let files = vec![c_src_dir.join("pippenger.cpp")];
+    let mut cc_def = None;
 
     match (cfg!(feature = "portable"), cfg!(feature = "force-adx")) {
         (true, false) => {
             println!("Compiling in portable mode without ISA extensions");
-            cc.define("__PASTA_PORTABLE__", None);
+            cc_def = Some("__PASTA_PORTABLE__");
         }
         (false, true) => {
             if target_arch.eq("x86_64") {
                 println!("Enabling ADX support via `force-adx` feature");
-                cc.define("__ADX__", None);
+                cc_def = Some("__ADX__");
             } else {
                 println!("`force-adx` is ignored for non-x86_64 targets");
             }
@@ -32,7 +33,7 @@ fn main() {
             if target_arch.eq("x86_64") && std::is_x86_feature_detected!("adx")
             {
                 println!("Enabling ADX because it was detected on the host");
-                cc.define("__ADX__", None);
+                cc_def = Some("__ADX__");
             }
         }
         (true, true) => panic!(
@@ -46,6 +47,9 @@ fn main() {
         .flag_if_supported("-Wno-unused-command-line-argument");
     if !cfg!(debug_assertions) {
         cc.define("NDEBUG", None);
+    }
+    if let Some(def) = cc_def {
+        cc.define(def, None);
     }
     if let Some(include) = env::var_os("DEP_SEMOLINA_C_INCLUDE") {
         cc.include(include);
@@ -64,6 +68,27 @@ fn main() {
         Err(_) => which::which("nvcc"),
     };
     if nvcc.is_ok() {
+        let mut nvcc = cc::Build::new();
+        nvcc.cuda(true);
+        nvcc.flag("-Xcompiler").flag("-Wno-unused-function");
+        nvcc.flag("-arch=sm_70");
+        nvcc.flag("--default-stream=per-thread");
+        nvcc.define("TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE", None);
+        nvcc.define("NTHREADS", "128");
+        if let Some(def) = cc_def {
+            nvcc.define(def, None);
+        }
+        if let Some(include) = env::var_os("DEP_SEMOLINA_C_INCLUDE") {
+            nvcc.include(include);
+        }
+        if let Some(include) = env::var_os("DEP_SPPARK_ROOT") {
+            nvcc.include(include);
+        }
+        nvcc.file("cuda/pallas.cu").file("cuda/vesta.cu").compile("pasta_msm_cuda");
+
+        println!("cargo:rerun-if-changed=cuda");
+        println!("cargo:rerun-if-env-changed=CXXFLAGS");
+        println!("cargo:rerun-if-env-changed=NVCC");
         println!("cargo:rustc-cfg=feature=\"cuda\"");
     }
 }
