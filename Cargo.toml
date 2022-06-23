@@ -27,7 +27,7 @@ portable = [ "semolina/portable" ]
 force-adx = [ "semolina/force-adx" ]
 
 [dependencies]
-semolina = "^0"
+semolina = { git = "https://github.com/supranational/semolina" }
 sppark = { git = "https://github.com/supranational/sppark" }
 pasta_curves = { version = "^0.3.1", features = ["repr-c"] }
 
