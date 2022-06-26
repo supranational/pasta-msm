@@ -10,6 +10,8 @@ sppark::cuda_error!();
 extern "C" {
     fn cuda_available() -> bool;
 }
+#[cfg(feature = "cuda")]
+pub static mut CUDA_OFF: bool = false;
 
 macro_rules! multi_scalar_mult {
     (
@@ -39,7 +41,7 @@ macro_rules! multi_scalar_mult {
             }
 
             #[cfg(feature = "cuda")]
-            if unsafe { cuda_available() } {
+            if npoints >= 1 << 16 && unsafe { !CUDA_OFF && cuda_available() } {
                 extern "C" {
                     fn $cuda_mult(
                         out: *mut $pasta::Point,
