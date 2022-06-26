@@ -25,6 +25,7 @@ portable = [ "semolina/portable" ]
 # Enable ADX even if the host CPU doesn't support it.
 # Binary can be executed on Broadwell+ and Ryzen+ systems.
 force-adx = [ "semolina/force-adx" ]
+cuda-mobile = []
 
 [dependencies]
 semolina = { git = "https://github.com/supranational/semolina" }

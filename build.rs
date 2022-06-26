@@ -74,6 +74,7 @@ fn main() {
         nvcc.flag("-arch=sm_70");
         nvcc.flag("--default-stream=per-thread");
         nvcc.define("TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE", None);
+        #[cfg(feature = "cuda-mobile")]
         nvcc.define("NTHREADS", "128");
         if let Some(def) = cc_def {
             nvcc.define(def, None);
@@ -84,7 +85,9 @@ fn main() {
         if let Some(include) = env::var_os("DEP_SPPARK_ROOT") {
             nvcc.include(include);
         }
-        nvcc.file("cuda/pallas.cu").file("cuda/vesta.cu").compile("pasta_msm_cuda");
+        nvcc.file("cuda/pallas.cu")
+            .file("cuda/vesta.cu")
+            .compile("pasta_msm_cuda");
 
         println!("cargo:rerun-if-changed=cuda");
         println!("cargo:rerun-if-env-changed=CXXFLAGS");
