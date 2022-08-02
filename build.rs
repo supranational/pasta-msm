@@ -72,7 +72,6 @@ fn main() {
         nvcc.cuda(true);
         nvcc.flag("-Xcompiler").flag("-Wno-unused-function");
         nvcc.flag("-arch=sm_70");
-        nvcc.flag("--default-stream=per-thread");
         nvcc.define("TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE", None);
         #[cfg(feature = "cuda-mobile")]
         nvcc.define("NTHREADS", "128");
@@ -83,6 +82,8 @@ fn main() {
             nvcc.include(include);
         }
         if let Some(include) = env::var_os("DEP_SPPARK_ROOT") {
+            let root = PathBuf::from(&include);
+            nvcc.file(root.join("util/all_gpus.cu"));
             nvcc.include(include);
         }
         nvcc.file("cuda/pallas.cu")
@@ -91,7 +92,7 @@ fn main() {
 
         println!("cargo:rerun-if-changed=cuda");
         println!("cargo:rerun-if-env-changed=CXXFLAGS");
-        println!("cargo:rerun-if-env-changed=NVCC");
         println!("cargo:rustc-cfg=feature=\"cuda\"");
     }
+    println!("cargo:rerun-if-env-changed=NVCC");
 }

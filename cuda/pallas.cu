@@ -22,5 +22,3 @@ RustError cuda_pippenger_pallas(point_t *out, const affine_t points[], size_t np
                                               const scalar_t scalars[])
 {   return mult_pippenger<bucket_t>(out, points, npoints, scalars);   }
 #endif
-
-#include <util/cuda_available.cu>

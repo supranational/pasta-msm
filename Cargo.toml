@@ -29,7 +29,7 @@ cuda-mobile = []
 
 [dependencies]
 semolina = "^0.1.2"
-sppark = "^0.1.1"
+sppark = { git = "https://github.com/supranational/sppark" }
 pasta_curves = { version = "^0.3.1", features = ["repr-c"] }
 
 [build-dependencies]
