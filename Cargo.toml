@@ -1,6 +1,6 @@
 [package]
 name = "pasta-msm"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2018"
 license = "Apache-2.0"
 description = "Optimized multiscalar multiplicaton for Pasta moduli for x86_64 and aarch64"
@@ -28,9 +28,9 @@ force-adx = [ "semolina/force-adx" ]
 cuda-mobile = []
 
 [dependencies]
-semolina = "^0.1.2"
-sppark = { git = "https://github.com/supranational/sppark" }
-pasta_curves = { version = "^0.3.1", features = ["repr-c"] }
+semolina = "~0.1.2"
+sppark = "~0.1.2"
+pasta_curves = { version = ">=0.3.1, <=0.4", features = ["repr-c"] }
 
 [build-dependencies]
 cc = "^1.0.70"
