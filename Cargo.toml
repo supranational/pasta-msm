@@ -30,7 +30,7 @@ cuda-mobile = []
 [dependencies]
 semolina = "~0.1.2"
 sppark = "~0.1.2"
-pasta_curves = { version = ">=0.3.1, <=0.4", features = ["repr-c"] }
+pasta_curves = { version = ">=0.3.1, <=0.5", features = ["repr-c"] }
 
 [build-dependencies]
 cc = "^1.0.70"
