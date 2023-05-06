@@ -7,6 +7,7 @@
 #![allow(unused_mut)]
 
 use criterion::{criterion_group, criterion_main, Criterion};
+use std::env::var;
 
 use pasta_msm;
 
@@ -17,8 +18,17 @@ extern "C" {
 
 include!("../src/tests.rs");
 
+/// Default bench with degree=17.
+/// You can use different degree as below:
+/// ```bash
+/// NPOW=19 cargo bench --bench main [--features cuda]
+/// ```
 fn criterion_benchmark(c: &mut Criterion) {
-    const NPOW: usize = 17;
+    let NPOW: usize = var("DEGREE")
+        .unwrap_or_else(|_| "17".to_string())
+        .parse()
+        .expect("Cannot parse DEGREE env var as u32");
+
     const NPOINTS: usize = 1 << NPOW;
 
     //println!("generating {} random points, just hang on...", NPOINTS);

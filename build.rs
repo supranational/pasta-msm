@@ -84,7 +84,9 @@ fn main() {
         if let Some(include) = env::var_os("DEP_SPPARK_ROOT") {
             nvcc.include(include);
         }
-        nvcc.clone().file("cuda/pallas.cu").compile("pallas_msm_cuda");
+        nvcc.clone()
+            .file("cuda/pallas.cu")
+            .compile("pallas_msm_cuda");
         nvcc.define("__MSM_SORT_DONT_IMPLEMENT__", None)
             .file("cuda/vesta.cu")
             .compile("vesta_msm_cuda");
