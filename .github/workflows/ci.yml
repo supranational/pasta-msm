@@ -1,0 +1,72 @@
+name: build
+
+on:
+  push:
+    branches:
+    - '**'
+  workflow_dispatch:
+    branches:
+    - '**'
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  cargo-test:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Get date
+      id: get-date
+      run: echo "date=$(date -u +%Y-%m)" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          **/Cargo.lock
+          **/target
+        key: ${{ runner.os }}-cargo-${{ steps.get-date.outputs.date }}
+
+    - name: Environment
+      shell: bash
+      run: |
+        lscpu 2>/dev/null && echo --- || true
+        env | sort
+
+    - name: The test
+      shell: bash
+      run: |
+        rustc --version --verbose
+        if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            cargo update
+        fi
+        if [ `uname -s` = "Linux" ]; then
+            # https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=20.04&target_type=deb_network
+            wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb
+            sudo dpkg -i cuda-keyring_1.0-1_all.deb
+            sudo apt-get update
+            sudo apt-get -y install cuda-minimal-build-12-1
+            export PATH=$PATH:/usr/local/cuda/bin
+        fi
+        cargo test --release
+        echo '--- test with sppark@github'
+        echo
+        echo '[patch.crates-io]' >> Cargo.toml
+        echo 'sppark = { git = "https://github.com/supranational/sppark" }' >> Cargo.toml
+        cargo test --release
+        cargo clean -p pasta-msm
+        cargo clean -p pasta-msm --release
+        rm -rf target/.rustc_info.json
+        rm -rf target/package
+        rm -rf target/{debug,release}/incremental
+        rm -rf target/*/{debug,release}/incremental
+        rm -rf ~/.cargo/registry/src
+        rm -rf ~/.cargo/registry/index/*/.cache
