@@ -70,8 +70,31 @@ fn main() {
     if nvcc.is_ok() {
         let mut nvcc = cc::Build::new();
         nvcc.cuda(true);
-        nvcc.flag("-Xcompiler").flag("-Wno-unused-function");
-        nvcc.flag("-arch=sm_70");
+
+        // Use environment variables for NVCC flags
+        let nvcc_prepend_flags =
+            env::var("NVCC_PREPEND_FLAGS").unwrap_or_default();
+        let nvcc_append_flags =
+            env::var("NVCC_APPEND_FLAGS").unwrap_or_default();
+
+        let our_flags = [
+            ("-Xcompiler", ""),
+            ("-Wno-unused-function", ""),
+            ("-arch=", "sm_70"),
+        ];
+        // Add our flags if not already present in the environment variables
+        for (flag_key, flag_val) in our_flags.iter() {
+            if !nvcc_prepend_flags.contains(flag_key)
+                && !nvcc_append_flags.contains(flag_key)
+            {
+                nvcc.flag(&format!("{flag_key}{flag_val}"));
+            }
+        }
+        let prepend_flags = nvcc_prepend_flags.split_ascii_whitespace();
+        for flag in prepend_flags {
+            nvcc.flag(flag);
+        }
+
         nvcc.define("TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE", None);
         #[cfg(feature = "cuda-mobile")]
         nvcc.define("NTHREADS", "128");
@@ -84,10 +107,17 @@ fn main() {
         if let Some(include) = env::var_os("DEP_SPPARK_ROOT") {
             nvcc.include(include);
         }
-        nvcc.clone().file("cuda/pallas.cu").compile("pallas_msm_cuda");
+        nvcc.clone()
+            .file("cuda/pallas.cu")
+            .compile("pallas_msm_cuda");
         nvcc.define("__MSM_SORT_DONT_IMPLEMENT__", None)
-            .file("cuda/vesta.cu")
-            .compile("vesta_msm_cuda");
+            .file("cuda/vesta.cu");
+
+        let append_flags = nvcc_append_flags.split_ascii_whitespace();
+        for flag in append_flags {
+            nvcc.flag(flag);
+        }
+        nvcc.compile("vesta_msm_cuda");
 
         println!("cargo:rerun-if-changed=cuda");
         println!("cargo:rerun-if-env-changed=CXXFLAGS");
