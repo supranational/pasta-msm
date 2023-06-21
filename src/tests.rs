@@ -5,6 +5,7 @@
 #[cfg(test)]
 mod tests {
     use crate as pasta_msm;
+    use core::cell::UnsafeCell;
     use core::mem::transmute;
     use core::sync::atomic::*;
     use pasta_curves::{
@@ -61,6 +62,10 @@ mod tests {
         ret
     }
 
+    fn as_mut<T>(x: &T) -> &mut T {
+        unsafe { &mut *UnsafeCell::raw_get(x as *const _ as *const _) }
+    }
+
     pub fn gen_scalars(npoints: usize) -> Vec<pallas::Scalar> {
         let mut ret: Vec<pallas::Scalar> = Vec::with_capacity(npoints);
         unsafe { ret.set_len(npoints) };
@@ -77,11 +82,7 @@ mod tests {
                         if work >= npoints {
                             break;
                         }
-                        unsafe {
-                            *(&ret[work] as *const pallas::Scalar
-                                as *mut pallas::Scalar) =
-                                pallas::Scalar::random(&mut rng)
-                        };
+                        *as_mut(&ret[work]) = pallas::Scalar::random(&mut rng);
                     }
                 })
             }
@@ -115,11 +116,7 @@ mod tests {
                         ret += points[work] * scalars[work];
                     }
 
-                    unsafe {
-                        *(&rets[tid.fetch_add(1, Ordering::Relaxed)]
-                            as *const pallas::Point
-                            as *mut pallas::Point) = ret
-                    };
+                    *as_mut(&rets[tid.fetch_add(1, Ordering::Relaxed)]) = ret;
                 })
             }
         });
