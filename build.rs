@@ -70,8 +70,11 @@ fn main() {
     if nvcc.is_ok() {
         let mut nvcc = cc::Build::new();
         nvcc.cuda(true);
+        nvcc.flag("-arch=sm_80");
+        nvcc.flag("-gencode").flag("arch=compute_70,code=sm_70");
+        nvcc.flag("-t0");
+        #[cfg(not(target_env = "msvc"))]
         nvcc.flag("-Xcompiler").flag("-Wno-unused-function");
-        nvcc.flag("-arch=sm_70");
         nvcc.define("TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE", None);
         #[cfg(feature = "cuda-mobile")]
         nvcc.define("NTHREADS", "128");
@@ -84,7 +87,9 @@ fn main() {
         if let Some(include) = env::var_os("DEP_SPPARK_ROOT") {
             nvcc.include(include);
         }
-        nvcc.clone().file("cuda/pallas.cu").compile("pallas_msm_cuda");
+        nvcc.clone()
+            .file("cuda/pallas.cu")
+            .compile("pallas_msm_cuda");
         nvcc.define("__MSM_SORT_DONT_IMPLEMENT__", None)
             .file("cuda/vesta.cu")
             .compile("vesta_msm_cuda");
