@@ -18,12 +18,15 @@ extern "C" {
 include!("../src/tests.rs");
 
 fn criterion_benchmark(c: &mut Criterion) {
-    const NPOW: usize = 17;
-    const NPOINTS: usize = 1 << NPOW;
+    let bench_npow: usize = std::env::var("BENCH_NPOW")
+        .unwrap_or("17".to_string())
+        .parse()
+        .unwrap();
+    let npoints: usize = 1 << bench_npow;
 
-    //println!("generating {} random points, just hang on...", NPOINTS);
-    let mut points = crate::tests::gen_points(NPOINTS);
-    let mut scalars = crate::tests::gen_scalars(NPOINTS);
+    //println!("generating {} random points, just hang on...", npoints);
+    let mut points = crate::tests::gen_points(npoints);
+    let mut scalars = crate::tests::gen_scalars(npoints);
 
     #[cfg(feature = "cuda")]
     {
@@ -33,7 +36,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("CPU");
     group.sample_size(10);
 
-    group.bench_function(format!("2**{} points", NPOW), |b| {
+    group.bench_function(format!("2**{} points", bench_npow), |b| {
         b.iter(|| {
             let _ = pasta_msm::pallas(&points, &scalars);
         })
@@ -45,18 +48,19 @@ fn criterion_benchmark(c: &mut Criterion) {
     if unsafe { cuda_available() } {
         unsafe { pasta_msm::CUDA_OFF = false };
 
-        const EXTRA: usize = 4;
-        let npoints = NPOINTS << EXTRA;
+        const EXTRA: usize = 5;
+        let bench_npow = bench_npow + EXTRA;
+        let npoints: usize = 1 << bench_npow;
 
         while points.len() < npoints {
             points.append(&mut points.clone());
         }
-        scalars.append(&mut crate::tests::gen_scalars(npoints - NPOINTS));
+        scalars.append(&mut crate::tests::gen_scalars(npoints - scalars.len()));
 
         let mut group = c.benchmark_group("GPU");
         group.sample_size(20);
 
-        group.bench_function(format!("2**{} points", NPOW + EXTRA), |b| {
+        group.bench_function(format!("2**{} points", bench_npow), |b| {
             b.iter(|| {
                 let _ = pasta_msm::pallas(&points, &scalars);
             })
