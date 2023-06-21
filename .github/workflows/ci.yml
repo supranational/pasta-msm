@@ -45,6 +45,7 @@ jobs:
       shell: bash
       run: |
         rustc --version --verbose
+        export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
         if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
             cargo update
         fi
