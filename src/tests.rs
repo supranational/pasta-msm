@@ -63,7 +63,7 @@ mod tests {
     }
 
     fn as_mut<T>(x: &T) -> &mut T {
-        unsafe { &mut *UnsafeCell::raw_get(x as *const _ as *const _) }
+        unsafe { (*(x as *const _ as *mut UnsafeCell<T>)).get_mut() }
     }
 
     pub fn gen_scalars(npoints: usize) -> Vec<pallas::Scalar> {
