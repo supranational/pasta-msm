@@ -68,24 +68,11 @@ fn main() {
         Err(_) => which::which("nvcc"),
     };
     if nvcc.is_ok() {
-        let mut nvcc = cc::Build::new();
-        nvcc.cuda(true);
-        nvcc.flag("-arch=sm_80");
-        nvcc.flag("-gencode").flag("arch=compute_70,code=sm_70");
-        nvcc.flag("-t0");
-        #[cfg(not(target_env = "msvc"))]
-        nvcc.flag("-Xcompiler").flag("-Wno-unused-function");
-        nvcc.define("TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE", None);
+        let mut nvcc = sppark::build::ccmd();
         #[cfg(feature = "cuda-mobile")]
         nvcc.define("NTHREADS", "128");
         if let Some(def) = cc_def {
             nvcc.define(def, None);
-        }
-        if let Some(include) = env::var_os("DEP_SEMOLINA_C_INCLUDE") {
-            nvcc.include(include);
-        }
-        if let Some(include) = env::var_os("DEP_SPPARK_ROOT") {
-            nvcc.include(include);
         }
         nvcc.clone()
             .file("cuda/pallas.cu")

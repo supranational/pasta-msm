@@ -2,6 +2,8 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
+#![allow(unexpected_cfgs)]
+
 extern crate semolina;
 
 #[cfg(feature = "cuda")]
